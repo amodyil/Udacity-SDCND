@@ -210,8 +210,10 @@ int main()
 		map_waypoints_dy.push_back(d_y);
 	}
 
-	h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
-																											 uWS::OpCode opCode) {
+	int lane = CENTER;
+	double ref_velocity = 0.0;
+
+	h.onMessage([&ref_velocity, &lane, &map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
 		// "42" at the start of the message means there's a websocket message event.
 		// The 4 signifies a websocket message
 		// The 2 signifies a websocket event
@@ -242,7 +244,7 @@ int main()
 					// Previous path data given to the Planner
 					auto previous_path_x = j[1]["previous_path_x"];
 					auto previous_path_y = j[1]["previous_path_y"];
-					
+
 					// Previous path's end s and d values
 					double end_path_s = j[1]["end_path_s"];
 					double end_path_d = j[1]["end_path_d"];
@@ -250,8 +252,6 @@ int main()
 					// Sensor Fusion Data, a list of all other cars on the same side of the road.
 					auto sensor_fusion = j[1]["sensor_fusion"];
 
-					int lane = CENTER;
-					double ref_velocity = 0.0;
 					const double MAX_SPEED = 49.5;
 					const double MAX_ACC = .224;
 
@@ -276,10 +276,13 @@ int main()
 						else if (d > 8 && d < 12)
 							t_lane = RIGHT;
 
+						if (t_lane < 0)
+							continue;
+
 						double vx = sensor_fusion[i][3];
 						double vy = sensor_fusion[i][4];
 						double check_speed = sqrt(vx * vx + vy * vy);
-						double check_car_s = sensor_fusion[i][5] + prev_size * 0.02 * check_speed;
+						double check_car_s = (double)sensor_fusion[i][5] + prev_size * 0.02 * check_speed;
 
 						if (t_lane == lane)
 							car_ahead |= check_car_s > car_s && check_car_s - car_s < 30;
@@ -413,7 +416,7 @@ int main()
 						double x_ref = x_point;
 						double y_ref = y_point;
 
-            			// Rotate back to normal after rotating previously
+						// Rotate back to normal after rotating previously
 						x_point = x_ref * cos(ref_yaw) - y_ref * sin(ref_yaw);
 						y_point = x_ref * sin(ref_yaw) + y_ref * cos(ref_yaw);
 
