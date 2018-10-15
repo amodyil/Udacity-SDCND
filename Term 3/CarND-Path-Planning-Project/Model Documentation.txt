@@ -1,7 +1,0 @@
-Trajectory generations 
-
-The code lines from 312 to 425 does the calculation of the trajectory based on the location coordinates, car's speed and the past path points.
-Firstly, the last two points of the previous trajectory along with three points at a far distance is used as initialization for the spline calculation. 
-The coordinates are then transformed to local car coordinates for spline calculation. To extend the trajectory, the passed trajectory points are copied 
-to the new trajectory and the rest of the points are calculated by evaluating the spline and transforming the output coordinates to local coordinates. 
-The speed component is also tweaked along every trajectory points.
