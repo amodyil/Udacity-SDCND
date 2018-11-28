@@ -1,16 +1,20 @@
 from styx_msgs.msg import TrafficLight
 import tensorflow as tf
 import numpy as np
+import os
+import cv2
 
 
 class TLClassifier(object):
     def __init__(self, is_site):
         if is_site:
-            graph_file = 'frozen_inference_graph_site.pb'
+            file = '/frozen_inference_graph_site.pb'
         else:
-            graph_file = 'frozen_inference_graph_sim.pb'
+            file = '/frozen_inference_graph_sim.pb'
 
+        graph_file = os.path.dirname(os.path.realpath(__file__)) + file
         graph = self.load_graph(graph_file)
+
         self.image_tensor = graph.get_tensor_by_name('image_tensor:0')
         self.boxes = graph.get_tensor_by_name('detection_boxes:0')
         self.scores = graph.get_tensor_by_name('detection_scores:0')
@@ -46,7 +50,8 @@ class TLClassifier(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        (boxes, scores, classes) = self.tf_session.run([self.boxes, self.scores, self.classes], feed_dict={self.image_tensor: image})
+        image_in = np.copy(np.expand_dims(cv2.resize(image, (150, 200)), axis=0))
+        (boxes, scores, classes) = self.tf_session.run([self.boxes, self.scores, self.classes], feed_dict={self.image_tensor: image_in})
 
         classes = np.squeeze(classes).astype(np.int32)
         scores = np.squeeze(scores)
