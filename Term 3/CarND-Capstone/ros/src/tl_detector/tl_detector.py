@@ -22,7 +22,7 @@ class TLDetector(object):
         self.pose = None
         self.waypoints = None
         self.waypoints_2d = None
-        self.waypoint_tree = None       
+        self.waypoint_tree = None
         self.camera_image = None
         self.lights = []
 
@@ -37,7 +37,7 @@ class TLDetector(object):
         rely on the position of the light and the camera image to predict it.
         '''
         sub3 = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb)
-        sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
+        sub6 = rospy.Subscriber('/image_color', Image, self.image_cb, queue_size=1, buff_size=512*1024*1024)  # 512 MB buffer size
 
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string)
@@ -60,10 +60,10 @@ class TLDetector(object):
 
     def waypoints_cb(self, waypoints):
         self.waypoints = waypoints
-        if not self.waypoints_2d:
-            self.waypoints_2d = [[waypoint.pose.pose.position.x, waypoint.pose.pose.position.y] for waypoint in 
-                                 waypoints.waypoints]
-            self.waypoint_tree = KDTree(self.waypoints_2d)
+        if not self.waypoint_tree:
+            waypoints_2d = [[waypoint.pose.pose.position.x, waypoint.pose.pose.position.y] for waypoint in
+                            waypoints.waypoints]
+            self.waypoint_tree = KDTree(waypoints_2d)
 
     def traffic_cb(self, msg):
         self.lights = msg.lights
@@ -125,7 +125,7 @@ class TLDetector(object):
             self.prev_light_loc = None
             return False
 
-        cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+        cv_image = cv2.resize(self.bridge.imgmsg_to_cv2(self.camera_image), (150, 200))
 
         # Get classification
         return self.light_classifier.get_classification(cv_image)
@@ -145,7 +145,7 @@ class TLDetector(object):
         # List of positions that correspond to the line to stop in front of for a given intersection
         stop_line_positions = self.config['stop_line_positions']
         if(self.pose):
-            car_wp_idx = self.get_closest_waypoint(self.pose.pose.position.x, 
+            car_wp_idx = self.get_closest_waypoint(self.pose.pose.position.x,
                                                    self.pose.pose.position.y)
 
             diff = len(self.waypoints.waypoints)
